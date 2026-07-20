@@ -1,0 +1,72 @@
+//===============================================================================
+//==                                                                           ==
+//==    LOOM  (c)  -  in-house Maya cloth / soft-body toolset                   ==
+//==    Author: Gregoire Dehame                                                 ==
+//==                                                                           ==
+//==    Attribute Editor template for the "lCollider" collider node.           ==
+//==    Collapsible sections, grouped sliders, per-attribute annotations.       ==
+//==    collapsible sections in workflow order, grouped controls, and          ==
+//==    per-attribute annotations that read like a short manual.               ==
+//==                                                                           ==
+//===============================================================================
+
+
+
+
+//-------------------------------------------------------------------------------
+// AElColliderTemplate  -  templates the lCollider node (type "lCollider").
+//-------------------------------------------------------------------------------
+global proc AElColliderTemplate(string $nodeName)
+{
+    editorTemplate -beginScrollLayout;
+
+        //------------------------------------------------------------------
+        // COLLIDER  -  how this collider draws in the viewport.
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Collider" -collapse 0;
+
+            editorTemplate -annotation "Physics draw: None / Surface / Mesh. How the collider (its capsules / spheres / mesh shell) is shown in the viewport." -addControl "displayMode";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // MESH COLLISION  -  opt in to using the connected mesh as a collider.
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Mesh Collision" -collapse 0;
+
+            editorTemplate -annotation "Opt-in: use the connected mesh as a real collider (off = display only)." -addControl "meshCollide";
+            editorTemplate -annotation "Treat the mesh as two-sided. On = cloth is pushed off both faces; off = only the outward side collides (faster, avoids far-side vacuuming)." -addControl "doubleSided";
+            editorTemplate -annotation "Collision half-thickness of the mesh shell, cm. The cloth is held this far off the surface." -addControl "thickness";
+            editorTemplate -annotation "How deep a penetration is still pushed out (single-sided); prevents far-side vacuuming." -addControl "innerFatness";
+            editorTemplate -annotation "Extra collision margin outside the surface, cm." -addControl "outerFatness";
+            editorTemplate -annotation "The collider mesh is deforming / animated each frame. Off = static geometry, which the solver can cache and treat as rigid (faster)." -addControl "geometryAnimated";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // FRICTION
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Friction" -collapse 0;
+
+            editorTemplate -annotation "Friction while a contact is not sliding; higher makes cloth grip and stick to this collider." -addControl "staticFriction";
+            editorTemplate -annotation "Friction while a contact is sliding; higher slows cloth as it slides across this collider." -addControl "dynamicFriction";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // DISPLAY  -  viewport colours for the collider draw.
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Display" -collapse 1;
+
+            editorTemplate -annotation "Wireframe colour of the collider draw." -addControl "loomWireColor";
+            editorTemplate -annotation "Face / shaded colour of the collider draw." -addControl "loomFaceColor";
+            editorTemplate -annotation "Opacity of the shaded collider faces, 0..1. 0 = wireframe only." -addControl "faceAlpha";
+            editorTemplate -annotation "Draw the collider inflated by its fatness / thickness margins, so you can see the true collision surface the cloth feels." -addControl "showInflated";
+
+        editorTemplate -endLayout;
+
+        // Anything not explicitly laid out above (custom / future attrs).
+        editorTemplate -addExtraControls;
+
+    editorTemplate -endScrollLayout;
+}

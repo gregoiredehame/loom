@@ -1,0 +1,117 @@
+//===============================================================================
+//==                                                                           ==
+//==    LOOM  (c)  -  in-house Maya cloth / soft-body toolset                   ==
+//==    Author: Gregoire Dehame                                                 ==
+//==                                                                           ==
+//==    Attribute Editor template for the "loom" solver node.                  ==
+//==    Collapsible sections, grouped sliders, per-attribute annotations.       ==
+//==    collapsible sections in workflow order, grouped controls, and          ==
+//==    per-attribute annotations that read like a short manual.               ==
+//==                                                                           ==
+//===============================================================================
+
+
+
+
+//-------------------------------------------------------------------------------
+// AEloomTemplate  -  templates the loom solver node (type "loom").
+//-------------------------------------------------------------------------------
+global proc AEloomTemplate(string $nodeName)
+{
+    editorTemplate -beginScrollLayout;
+
+        //------------------------------------------------------------------
+        // SOLVER  -  the core stepping controls.
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Solver" -collapse 0;
+
+            editorTemplate -annotation "Master switch. Off freezes the solver: the cloth holds its last solved state and no stepping happens." -addControl "enable";
+            editorTemplate -annotation "Frame the simulation initialises on. Before this frame the cloth sits at its rest / input pose." -addControl "startFrame";
+            editorTemplate -annotation "Frames per second the solver assumes when converting frames to seconds. Match your scene's playback rate." -addControl "frameRate";
+            editorTemplate -annotation "Sub-steps per frame; raise for fast motion / collision quality (cost scales linearly)." -addControl "substeps";
+            editorTemplate -annotation "Constraint solver iterations per sub-step; a budget, not a convergence guarantee. More = stiffer, more stable, slower." -addControl "iterations";
+            editorTemplate -annotation "Slow / fast the sim without changing the sub-step size. 0.5 = half speed slow-motion, 2.0 = double speed." -addControl "timeScale";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // GRAVITY & AIR  -  the ambient forces every garment feels.
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Gravity & Air" -collapse 0;
+
+            editorTemplate -annotation "World gravity vector, cm/s^2 (default 0, -980, 0). Scale with your scene units." -addControl "gravity";
+            editorTemplate -annotation "Density of the surrounding air. Drives drag and lift; 0 = vacuum, 1 = default sea-level-ish." -addControl "airDensity";
+            editorTemplate -annotation "Magnitude of the global wind, in the wind direction. 0 = no wind." -addControl "windSpeed";
+            editorTemplate -annotation "World-space direction the wind blows toward. Normalised internally." -addControl "windDirection";
+            editorTemplate -annotation "Turbulence added to the wind, 0..1. Breaks up the flat push into gusts for a more natural flap." -addControl "windNoise";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // COLLISIONS  -  global collision toggles (per-cloth self on lCloth).
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Collisions" -collapse 0;
+
+            editorTemplate -annotation "Global self-collision. Lets every cloth collide against itself and other cloths. Costly; enable when layering matters." -addControl "selfCollisions";
+            editorTemplate -annotation "Collide the cloth against an infinite horizontal ground plane at Ground Height." -addControl "groundCollide";
+            editorTemplate -annotation "World Y of the ground plane used when Ground Collide is on." -addControl "groundHeight";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // QUALITY / SAFETY  -  anti-explosion & lead-in insurance.
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Quality / Safety" -collapse 1;
+
+            editorTemplate -annotation "Clamp max travel per sub-step (0 = off); anti-explosion insurance. Caps how far a point can jump in one step." -addControl "maxLinearMotion";
+            editorTemplate -annotation "If a single frame takes longer than this (seconds) the solver bails out gracefully instead of hanging. 0 = no limit." -addControl "panicTime";
+            editorTemplate -annotation "Enable the Frame Jump Limit guard below. Off = the solver will attempt any time gap." -addControl "useFrameJumpLimit";
+            editorTemplate -annotation "Largest forward frame gap the solver will simulate through in one evaluation; a bigger jump triggers a reset instead of a long catch-up." -addControl "frameJumpLimit";
+            editorTemplate -annotation "Lead-in time (in frames) the solver relaxes the cloth before the shot starts, settling wrinkles from the rest pose." -addControl "leadDuration";
+            editorTemplate -annotation "During the lead-in, hold the input mesh still (stasis) so the cloth settles against a static pose rather than chasing animation." -addControl "leadStasis";
+            editorTemplate -annotation "Print verbose per-frame diagnostics to the Script Editor. Useful when tuning; leave off for production." -addControl "debugMessages";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // CACHE  -  the RAM playback cache.
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Cache" -collapse 1;
+
+            editorTemplate -annotation "Keep solved frames in RAM so scrubbing back and re-playing is instant. Off = every frame re-solves." -addControl "cacheEnable";
+            editorTemplate -annotation "Upper bound on the RAM cache, in megabytes. Oldest frames are dropped once the budget is hit." -addControl "cacheMemoryLimit";
+            editorTemplate -annotation "Frame at which the cache and solver state are cleared. Set to a shot's first frame to re-initialise there." -addControl "resetFrame";
+            editorTemplate -annotation "Bump this value (or connect it) to force a fresh reset of the solver and cache without editing other attributes." -addControl "resetTrigger";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // STATISTICS  -  read-only diagnostics from the last solve.
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Statistics" -collapse 1;
+
+            editorTemplate -annotation "Read-only: number of constraints solved on the last step. A rough measure of scene complexity." -addControl "statConstraintCount";
+            editorTemplate -annotation "Read-only: number of active collision contacts on the last step." -addControl "statContactCount";
+            editorTemplate -annotation "Read-only: milliseconds the last frame's solve took. Watch this when tuning substeps / iterations." -addControl "statSolveMs";
+            editorTemplate -annotation "Read-only: first frame currently held in the RAM cache." -addControl "statCachedLo";
+            editorTemplate -annotation "Read-only: last frame currently held in the RAM cache." -addControl "statCachedHi";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // DISPLAY  -  the viewport badge / debug draw for the solver.
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Display" -collapse 1;
+
+            editorTemplate -annotation "Master toggle for the solver's viewport draw (icon, wind, and any debug overlays)." -addControl "showDrawAll";
+            editorTemplate -annotation "Draw an arrow in the viewport showing the current wind direction and strength." -addControl "showWind";
+            editorTemplate -annotation "Colour of the loom solver icon in the viewport." -addControl "loomIconColor";
+            editorTemplate -annotation "Size multiplier for the loom solver icon in the viewport." -addControl "loomIconScale";
+
+        editorTemplate -endLayout;
+
+        // Anything not explicitly laid out above (custom / future attrs).
+        editorTemplate -addExtraControls;
+
+    editorTemplate -endScrollLayout;
+}

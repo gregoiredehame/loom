@@ -1,0 +1,79 @@
+# Claude / AI ignores
+.claude/
+CLAUDE.md
+*.jsonl
+
+# Python ignores
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+*.egg
+*.manifest
+*.spec
+pip-log.txt
+
+# Pytest ignores
+.cache/
+
+# mypy ignores
+.mypy_cache/
+.dmypy.json
+
+# Pyre type checker ignores
+.pyre/
+
+# PyCharm ignores
+.idea/
+
+# VSCode ignores
+.vscode/
+
+# Visual Studio ignores
+.vs/
+
+# Jupyter Notebook ignores
+.ipynb_checkpoints/
+
+# Maya generated swatch caches
+.mayaSwatches/
+
+# Distribution / packaging ignores (anchored to the repo root so nested SOURCE folders that
+# happen to share a name are NOT ignored)
+/build/
+/develop-eggs/
+/dist/
+/downloads/
+/eggs/
+/.eggs/
+/lib/
+/lib64/
+/parts/
+/sdist/
+/var/
+/wheels/
+/share/python-wheels/
+
+# Unit test / coverage reports ignores
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+DOCSTRINGS_TODO.txt

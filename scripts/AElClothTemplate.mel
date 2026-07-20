@@ -1,0 +1,274 @@
+//===============================================================================
+//==                                                                           ==
+//==    LOOM  (c)  -  in-house Maya cloth / soft-body toolset                   ==
+//==    Author: Gregoire Dehame                                                 ==
+//==                                                                           ==
+//==    Attribute Editor template for the "lCloth" garment node.               ==
+//==    Collapsible sections, grouped sliders, per-attribute annotations.       ==
+//==    collapsible sections in workflow order, grouped sliders, and           ==
+//==    per-attribute annotations that read like a short manual. The           ==
+//==    Painted Maps section pairs each map's Range with a Paint button        ==
+//==    that hands off to loom.paint() in Python.                              ==
+//==                                                                           ==
+//===============================================================================
+
+
+
+
+//-------------------------------------------------------------------------------
+// AElClothPaintRow  -  draw one "Range slider + Paint button" row for a map.
+//
+//   $node  : the lCloth node long name.
+//   $range : the Range attribute long name (e.g. "massRange"). May be "" for
+//            maps that have no Range (e.g. pinWeights) -> only the button shows.
+//   $map   : the painted map name passed to loom.paint (e.g. "massMap").
+//   $label : the human label shown at the left of the row.
+//-------------------------------------------------------------------------------
+global proc AElClothPaintRow(string $node, string $range, string $map, string $label)
+{
+    string $rowName  = ("loomPaintRow_" + $map);
+    string $fieldGrp = ("loomPaintRange_" + $map);
+    string $btnName  = ("loomPaintBtn_" + $map);
+
+    // Python hand-off : loom.paint(<node>, <map>) opens the Artisan paint tool
+    // wired to this cloth's map.  Note the escaped quotes around the arguments.
+    string $paintCmd = ("python(\"import loom; loom.paint('" + $node + "', '" + $map + "')\")");
+
+    rowLayout -numberOfColumns 3
+              -adjustableColumn 2
+              -columnWidth3 140 180 70
+              -columnAttach 1 "right" 4
+              -columnAttach 2 "both"  4
+              -columnAttach 3 "left"  4
+              $rowName;
+
+        text -label $label;
+
+        if ($range != "")
+        {
+            attrFieldSliderGrp -label ""
+                               -attribute ($node + "." + $range)
+                               -annotation ("Range for the " + $label + " map: the painted 0..1 weight is multiplied by this and added on top of the base value.")
+                               $fieldGrp;
+        }
+        else
+        {
+            // No Range for this map (e.g. pin weights) : keep the column spaced.
+            text -label "";
+        }
+
+        button -label "Paint"
+               -width 60
+               -annotation ("Paint the " + $label + " map on this cloth (opens the Artisan paint tool).")
+               -command $paintCmd
+               $btnName;
+
+    setParent ..;
+}
+
+
+
+
+//-------------------------------------------------------------------------------
+// AElClothPaintNew  -  create the whole Painted Maps block (callCustom "new").
+//-------------------------------------------------------------------------------
+global proc AElClothPaintNew(string $nodeName)
+{
+    // $nodeName arrives as "<node>.<something>" from callCustom; take the node.
+    string $tokens[];
+    tokenize($nodeName, ".", $tokens);
+    string $node = $tokens[0];
+
+    setUITemplate -pushTemplate attributeEditorTemplate;
+
+    columnLayout -adjustableColumn true loomPaintColumn;
+
+        text -align "left"
+             -label "Each map paints local variation on top of the base value. Base + (painted 0..1) * Range."
+             loomPaintHelp;
+
+        separator -style "in" -height 8;
+
+        // pinWeights has no Range - it is a straight 0..1 pin mask.
+        AElClothPaintRow($node, "",                        "pinWeights",          "Pin Weights");
+        AElClothPaintRow($node, "massRange",               "massMap",             "Mass");
+        AElClothPaintRow($node, "stretchStiffnessRange",   "stretchStiffnessMap", "Stretch Stiffness");
+        AElClothPaintRow($node, "compressionStiffnessRange","compressionStiffnessMap", "Compression Stiffness");
+        AElClothPaintRow($node, "bendStiffnessRange",      "bendStiffnessMap",    "Bend Stiffness");
+        AElClothPaintRow($node, "thicknessRange",          "thicknessMap",        "Thickness");
+        AElClothPaintRow($node, "goalStrengthRange",       "goalStrengthMap",     "Goal Strength");
+        AElClothPaintRow($node, "reducerRange",            "reducerMap",          "Reducer");
+
+    setParent ..;
+
+    setUITemplate -popTemplate;
+}
+
+
+
+
+//-------------------------------------------------------------------------------
+// AElClothPaintReplace  -  re-point the block at a new node (callCustom "replace").
+//-------------------------------------------------------------------------------
+global proc AElClothPaintReplace(string $nodeName)
+{
+    string $tokens[];
+    tokenize($nodeName, ".", $tokens);
+    string $node = $tokens[0];
+
+    // The maps and their Range attributes, in the same order as -New.
+    string $ranges[] = { "",                          "massRange",           "stretchStiffnessRange",
+                         "compressionStiffnessRange", "bendStiffnessRange",  "thicknessRange",
+                         "goalStrengthRange",         "reducerRange" };
+    string $maps[]   = { "pinWeights",                "massMap",             "stretchStiffnessMap",
+                         "compressionStiffnessMap",   "bendStiffnessMap",    "thicknessMap",
+                         "goalStrengthMap",           "reducerMap" };
+
+    for ($i = 0; $i < size($maps); ++$i)
+    {
+        string $map   = $maps[$i];
+        string $range = $ranges[$i];
+
+        // Re-point the Range slider at this node's attribute.
+        if ($range != "")
+        {
+            attrFieldSliderGrp -edit
+                               -attribute ($node + "." + $range)
+                               ("loomPaintRange_" + $map);
+        }
+
+        // Re-wire the Paint button's Python command for this node.
+        string $paintCmd = ("python(\"import loom; loom.paint('" + $node + "', '" + $map + "')\")");
+        button -edit -command $paintCmd ("loomPaintBtn_" + $map);
+    }
+}
+
+
+
+
+//-------------------------------------------------------------------------------
+// AElClothTemplate  -  templates the lCloth garment node (type "lCloth").
+//-------------------------------------------------------------------------------
+global proc AElClothTemplate(string $nodeName)
+{
+    editorTemplate -beginScrollLayout;
+
+        //------------------------------------------------------------------
+        // SOLVER  -  per-garment enable.
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Solver" -collapse 0;
+
+            editorTemplate -annotation "Simulate this garment. Off = the cloth passes through as its skinned / input mesh (no sim)." -addControl "enable";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // COLLISION  -  thickness, self-collision, friction.
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Collision" -collapse 0;
+
+            editorTemplate -annotation "Collision half-thickness in cm; also the self-collision radius. Larger keeps cloth further off colliders." -addControl "thickness";
+            editorTemplate -annotation "Let this garment collide against itself (needs the solver's global self-collisions on too)." -addControl "selfCollide";
+            editorTemplate -annotation "Self-collision radius. -1 = inherit thickness. Set explicitly to make self-contacts thinner or thicker than outward collision." -addControl "selfThickness";
+            editorTemplate -annotation "Friction while a contact is not sliding; higher makes the cloth grip and stick to colliders." -addControl "staticFriction";
+            editorTemplate -annotation "Friction while a contact is sliding; higher slows the cloth as it slides across colliders." -addControl "dynamicFriction";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // DENSITY / MASS
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Density / Mass" -collapse 0;
+
+            editorTemplate -annotation "Per-point mass. Heavier cloth falls harder and resists forces more; the Mass map paints local variation." -addControl "mass";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // STRETCH
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Stretch" -collapse 0;
+
+            editorTemplate -annotation "Resistance to stretching (1 = rigid); the base value, the Range x Map paints local variation." -addControl "stretchStiffness";
+            editorTemplate -annotation "Resistance to compression / gathering (1 = rigid). Lower lets the cloth bunch and fold more freely." -addControl "compressionStiffness";
+            editorTemplate -annotation "Hard cap on how far an edge may stretch beyond rest, as a fraction (0 = no limit). Prevents rubber-banding." -addControl "maxStretch";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // BENDING
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Bending" -collapse 0;
+
+            editorTemplate -annotation "Resistance to folding / creasing. Low = soft silky drape, high = stiff paper-like cloth." -addControl "bendStiffness";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // DAMPING
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Damping" -collapse 0;
+
+            editorTemplate -annotation "Global velocity damping, 0..1. Bleeds off motion each step; higher settles faster but can feel sluggish." -addControl "damping";
+            editorTemplate -annotation "Relative (viscous) damping between neighbouring points. Smooths out jitter without killing overall motion." -addControl "viscousDamping";
+            editorTemplate -annotation "Extra motion reducer, 0..1. Calms high-frequency chatter; paint the Reducer map to target only trouble areas." -addControl "reducer";
+            editorTemplate -annotation "Clamp on per-point speed (0 = off). A safety cap that stops runaway points from exploding." -addControl "maxSpeed";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // AERODYNAMICS
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Aerodynamics" -collapse 1;
+
+            editorTemplate -annotation "How strongly the surrounding air slows the cloth, 0..1. Higher = the cloth feels heavier / more resistant in air." -addControl "airDrag";
+            editorTemplate -annotation "How much the moving air lifts the cloth, 0..1. Gives flags and skirts that billowing, floaty feel." -addControl "airLift";
+            editorTemplate -annotation "Extra drag pulling the cloth toward its skinned / input pose, 0..1. Keeps sim from drifting far from the animation." -addControl "skinDrag";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // GOAL POSING  -  pull the sim toward the animated pose.
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Goal Posing" -collapse 1;
+
+            editorTemplate -annotation "How strongly the sim is pulled toward the animated pose (0 = free); keeps collision consistency unlike a plain blend." -addControl "goalStrength";
+            editorTemplate -annotation "Stiffness of the trailing goal: how tightly the cloth follows its recent goal history rather than the instantaneous pose." -addControl "goalTrailStiffness";
+            editorTemplate -annotation "Viscosity of the trailing goal. Smooths the follow so the cloth eases toward the goal instead of snapping." -addControl "goalTrailViscosity";
+            editorTemplate -annotation "Viscosity of the direct goal pull. Higher = softer, more damped approach to the goal pose." -addControl "goalViscosity";
+            editorTemplate -annotation "Cap on the speed the goal may impart. Stops a fast-moving goal pose from yanking the cloth violently." -addControl "goalVelocityLimit";
+            editorTemplate -annotation "Below this painted goal weight (0..1) the goal has no effect; remaps the Goal Strength map's low end." -addControl "goalLowerThreshold";
+            editorTemplate -annotation "At or above this painted goal weight (0..1) the goal is at full strength; remaps the Goal Strength map's high end." -addControl "goalUpperThreshold";
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // PAINTED MAPS  -  Range + Paint button per paintable map.
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Painted Maps" -collapse 1;
+
+            editorTemplate -callCustom AElClothPaintNew AElClothPaintReplace $nodeName;
+
+        editorTemplate -endLayout;
+
+        //------------------------------------------------------------------
+        // DISPLAY  -  physics draw mode & viewport colours.
+        //------------------------------------------------------------------
+        editorTemplate -beginLayout "Display" -collapse 1;
+
+            editorTemplate -annotation "Physics draw: None / Surface / Mesh / Soft Primitives / Paint Map. What the solver overlays on this garment in the viewport." -addControl "displayMode";
+            editorTemplate -annotation "Wireframe colour of the physics draw overlay." -addControl "loomWireColor";
+            editorTemplate -annotation "Face / shaded colour of the physics draw overlay." -addControl "loomFaceColor";
+            editorTemplate -annotation "Opacity of the shaded physics-draw faces, 0..1. 0 = wireframe only." -addControl "faceAlpha";
+            editorTemplate -annotation "Colour the cloth by its pin / blend weight so you can see where sim gives way to the skinned pose." -addControl "showBlendMap";
+            editorTemplate -annotation "Visualise the collision thickness shell around the cloth." -addControl "showThickness";
+            editorTemplate -annotation "Mark active collision contacts in the viewport. Handy when debugging why cloth sticks or pushes." -addControl "showContacts";
+            editorTemplate -annotation "Size of the drawn points when the physics draw shows vertices / soft primitives." -addControl "pointSize";
+
+        editorTemplate -endLayout;
+
+        // Anything not explicitly laid out above (custom / future attrs).
+        editorTemplate -addExtraControls;
+
+    editorTemplate -endScrollLayout;
+}
