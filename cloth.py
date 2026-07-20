@@ -7,8 +7,8 @@ Modified: Jul 20, 2026
 Module: cloth
 Execute: from loom import cloth
 
-Garments: add a mesh (plain or skinned) to the solver as an lCloth shape, wire its material forward to
-the solver, and manage the garment's lifecycle. lCloth is a locator that computes its output mesh AND
+Garments: add a mesh (plain or skinned) to the solver as a loomCloth shape, wire its material forward to
+the solver, and manage the garment's lifecycle. loomCloth is a locator that computes its output mesh AND
 draws itself (nCloth style); it blends the skinned input toward the solved mesh by pinWeights.
 """
 
@@ -21,8 +21,8 @@ from . import util
 from .solver import get_solver
 
 
-# every per-garment attribute forwarded from lCloth to loom.inCloth[idx]. The solver reads ONLY these;
-# lCloth is the artist-facing source of truth. Long names match on both nodes.
+# every per-garment attribute forwarded from loomCloth to loom.inCloth[idx]. The solver reads ONLY these;
+# loomCloth is the artist-facing source of truth. Long names match on both nodes.
 MATERIAL = (
     # v1 base material
     "mass", "stretchStiffness", "compressionStiffness", "bendStiffness", "maxStretch",
@@ -42,24 +42,24 @@ MATERIAL = (
 
 
 def _wire_material(cloth:str, solver:str, idx:int):
-    """Connect each per-garment material attr on lCloth to loom.inCloth[idx].
+    """Connect each per-garment material attr on loomCloth to loom.inCloth[idx].
 
     Skips (with a warning) any attr that fails to connect, so a single missing/renamed attr can never
     abort the whole setup. pinWeights is forwarded too, so the solver can pin/kinematic-drive vertices
-    itself (in addition to lCloth's client-side blend).
+    itself (in addition to loomCloth's client-side blend).
     """
     for attr in MATERIAL:
         try:
             cmds.connectAttr("%s.%s" % (cloth, attr), "%s.inCloth[%d].%s" % (solver, idx, attr), force=True)
         except Exception as error:
-            log.warning("lCloth material '%s' not wired to the solver (%s)." % (attr, error))
+            log.warning("loomCloth material '%s' not wired to the solver (%s)." % (attr, error))
 
 
 def setup(mesh:str, solver:str=None, start:float=None, fps:float=24.0, name:str=None) -> str:
-    """Add a plain (un-skinned) mesh to the loom solver as an lCloth SHAPE.
+    """Add a plain (un-skinned) mesh to the loom solver as a loomCloth SHAPE.
 
     Same wiring as setup_after_skin, but the rest input is the mesh's own geometry (frozen into a hidden
-    intermediate copy) instead of a skinCluster, so lCloth drives the visible shape without feeding it
+    intermediate copy) instead of a skinCluster, so loomCloth drives the visible shape without feeding it
     from itself. Use setup_after_skin for skinned garments.
 
     Args:
@@ -67,10 +67,10 @@ def setup(mesh:str, solver:str=None, start:float=None, fps:float=24.0, name:str=
         solver: (str):   - the loom solver to join (None = the shared one).
         start:  (float): - solver start frame (None = leave the solver's current value).
         fps:    (float): - frames per second used for the timestep.
-        name:   (str):   - lCloth node name.
+        name:   (str):   - loomCloth node name.
 
     Returns:
-        str: the lCloth shape node.
+        str: the loomCloth shape node.
     """
     util.load()
     solver = solver or get_solver()
@@ -82,7 +82,7 @@ def setup(mesh:str, solver:str=None, start:float=None, fps:float=24.0, name:str=
     xform = cmds.listRelatives(shp, parent=True, fullPath=True)[0]
     idx   = len(cmds.getAttr(solver + ".inCloth", multiIndices=True) or [])
 
-    nm = name or util.next_name("lCloth")
+    nm = name or util.next_name("loomCloth")
     # a hidden intermediate copy of the shape holds the rest pose (the sim input)
     dup  = cmds.duplicate(xform, name=nm + "Rest")[0]
     rest = util.shape(dup)
@@ -91,7 +91,7 @@ def setup(mesh:str, solver:str=None, start:float=None, fps:float=24.0, name:str=
     cmds.delete(dup)
 
     xf = cmds.createNode("transform", name=nm)
-    lc = cmds.createNode("lCloth", name=xf + "Shape", parent=xf)
+    lc = cmds.createNode("loomCloth", name=xf + "Shape", parent=xf)
 
     rest_out = rest + ".outMesh"
     cmds.connectAttr(rest_out, "%s.inCloth[%d].inMesh" % (solver, idx), force=True)
@@ -103,24 +103,24 @@ def setup(mesh:str, solver:str=None, start:float=None, fps:float=24.0, name:str=
 
 
 def setup_after_skin(mesh:str, skin:str=None, solver:str=None, name:str=None) -> str:
-    """Add a skinned garment to the loom solver as an lCloth SHAPE (nCloth style).
+    """Add a skinned garment to the loom solver as a loomCloth SHAPE (nCloth style).
 
     Wiring:
         skinCluster.outputGeometry -> loom.inCloth[i].inMesh   (the skinned pose)
-        skinCluster.outputGeometry -> lCloth.inMesh            (same skinned pose)
-        loom.outCloth[i]           -> lCloth.solvedMesh        (the solved garment)
-        lCloth.<material>          -> loom.inCloth[i].<material>
-        lCloth.outMesh             -> <render mesh>.inMesh     (drives the visible garment)
-    lCloth blends inMesh toward solvedMesh per vertex by pinWeights (0 = stays skinned = pin).
+        skinCluster.outputGeometry -> loomCloth.inMesh            (same skinned pose)
+        loom.outCloth[i]           -> loomCloth.solvedMesh        (the solved garment)
+        loomCloth.<material>          -> loom.inCloth[i].<material>
+        loomCloth.outMesh             -> <render mesh>.inMesh     (drives the visible garment)
+    loomCloth blends inMesh toward solvedMesh per vertex by pinWeights (0 = stays skinned = pin).
 
     Args:
         mesh:   (str): - the skinned garment mesh.
         skin:   (str): - its skinCluster (None = found on the mesh).
         solver: (str): - the loom solver to join (None = the shared one).
-        name:   (str): - lCloth node name.
+        name:   (str): - loomCloth node name.
 
     Returns:
-        str: the lCloth shape node.
+        str: the loomCloth shape node.
     """
     util.load()
     if skin is None:
@@ -134,8 +134,8 @@ def setup_after_skin(mesh:str, skin:str=None, solver:str=None, name:str=None) ->
     shp    = util.shape(mesh)
     idx    = len(cmds.getAttr(solver + ".inCloth", multiIndices=True) or [])
 
-    xform = cmds.createNode("transform", name=name or util.next_name("lCloth"))
-    lc    = cmds.createNode("lCloth", name=xform + "Shape", parent=xform)
+    xform = cmds.createNode("transform", name=name or util.next_name("loomCloth"))
+    lc    = cmds.createNode("loomCloth", name=xform + "Shape", parent=xform)
 
     skin_out = skin + ".outputGeometry[0]"
     cmds.connectAttr(skin_out, "%s.inCloth[%d].inMesh" % (solver, idx), force=True)
@@ -181,7 +181,7 @@ def setup_wrapped(render_mesh:str, reduce_percent:float=80.0, start:float=None, 
         cmds.setAttr(wrap + ".falloffScale", 1.0)
         cmds.proximityWrap(wrap, edit=True, addDrivers=[util.shape(proxy)])
     except Exception as error:
-        log.error("proximityWrap setup failed (%s). Proxy + lCloth are ready; wrap the render mesh "
+        log.error("proximityWrap setup failed (%s). Proxy + loomCloth are ready; wrap the render mesh "
                   "to '%s' by hand." % (error, proxy))
         wrap = None
 
@@ -192,10 +192,10 @@ def remove_cloth(cloth:str, solver:str=None):
     """Remove a garment from the solver: disconnect and delete its inCloth/outCloth elements.
 
     Safe now the solver keys its state by logical index, so removing one garment does not disturb the
-    others. Leaves the lCloth node itself in place unless you delete it yourself.
+    others. Leaves the loomCloth node itself in place unless you delete it yourself.
 
     Args:
-        cloth:  (str): - the lCloth shape (transform or shape).
+        cloth:  (str): - the loomCloth shape (transform or shape).
         solver: (str): - the loom solver (None = found from the cloth's solvedMesh source).
     """
     shape = util.cloth_shape(cloth)

@@ -7,7 +7,7 @@ Modified: Jul 20, 2026
 Module: material
 Execute: from loom import material
 
-Fabric material: apply a named preset of material scalars to an lCloth, list the presets, or save/load
+Fabric material: apply a named preset of material scalars to a loomCloth, list the presets, or save/load
 the full scalar material of a garment to/from a JSON file on disk. Presets and save/load cover only the
 scalar material attributes; the per-vertex maps are handled by loom.weights.
 """
@@ -42,10 +42,10 @@ def presets() -> list:
 
 
 def apply_preset(cloth:str, preset:str="cotton"):
-    """Apply a fabric preset (a dict of material scalars) to an lCloth.
+    """Apply a fabric preset (a dict of material scalars) to a loomCloth.
 
     Args:
-        cloth:  (str): - the lCloth shape (transform or shape).
+        cloth:  (str): - the loomCloth shape (transform or shape).
         preset: (str): - one of: cotton, denim, silk, leather, jersey, rubber.
     """
     shape = util.cloth_shape(cloth)
@@ -61,13 +61,13 @@ def apply_preset(cloth:str, preset:str="cotton"):
 
 
 def save_material(cloth:str, path:str) -> str:
-    """Write every scalar material attribute of an lCloth to a JSON file (maps excluded).
+    """Write every scalar material attribute of a loomCloth to a JSON file (maps excluded).
 
     Only the non-map scalar material attributes are saved; the per-vertex maps (names ending in "Map")
     are skipped - they belong to the mesh and are handled by loom.weights.
 
     Args:
-        cloth: (str): - the lCloth shape (transform or shape).
+        cloth: (str): - the loomCloth shape (transform or shape).
         path:  (str): - the .json output path.
 
     Returns:
@@ -90,10 +90,10 @@ def save_material(cloth:str, path:str) -> str:
 
 
 def load_material(cloth:str, path:str):
-    """Read a JSON material file and set each scalar attribute onto an lCloth.
+    """Read a JSON material file and set each scalar attribute onto a loomCloth.
 
     Args:
-        cloth: (str): - the lCloth shape (transform or shape).
+        cloth: (str): - the loomCloth shape (transform or shape).
         path:  (str): - the .json file to read.
     """
     shape = util.cloth_shape(cloth)

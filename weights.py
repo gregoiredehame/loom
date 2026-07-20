@@ -8,7 +8,7 @@ Module: weights
 Execute: from loom import weights
 
 Per-vertex maps: pin vertices to the skinned pose, pin a border row, open the Artisan paint tool on an
-lCloth map, or set a map directly from a list of floats. pinWeights is the pin/blend map (0 = pinned to
+loomCloth map, or set a map directly from a list of floats. pinWeights is the pin/blend map (0 = pinned to
 the skinned pose, 1 = fully simulated); the other maps modulate the material scalars per vertex.
 """
 
@@ -20,16 +20,16 @@ import maya.cmds as cmds
 from . import util
 
 
-# per-vertex maps that live on lCloth and are the ones a user paints. pinWeights is the pin/blend map.
+# per-vertex maps that live on loomCloth and are the ones a user paints. pinWeights is the pin/blend map.
 PAINTABLE = ("pinWeights", "massMap", "stretchStiffnessMap", "compressionStiffnessMap",
              "bendStiffnessMap", "thicknessMap", "goalStrengthMap", "reducerMap")
 
 
 def _register_paintable():
-    """Register every lCloth per-vertex map as a paintable double-array (idempotent, safe to re-call)."""
+    """Register every loomCloth per-vertex map as a paintable double-array (idempotent, safe to re-call)."""
     for attr in PAINTABLE:
         try:
-            cmds.makePaintable("lCloth", attr, attrType="doubleArray")
+            cmds.makePaintable("loomCloth", attr, attrType="doubleArray")
         except Exception:
             pass
 
@@ -38,9 +38,9 @@ def pin(cloth:str, vertices, count:int=None):
     """Pin vertices to the skinned pose by setting their pinWeight to 0 (1 = fully simulated).
 
     Args:
-        cloth:    (str):  - the lCloth shape.
+        cloth:    (str):  - the loomCloth shape.
         vertices: (list): - vertex indices to pin.
-        count:    (int):  - total vertex count (None = read it from the mesh feeding lCloth).
+        count:    (int):  - total vertex count (None = read it from the mesh feeding loomCloth).
     """
     n = count if count else util.vert_count(cloth)
     if isinstance(n, (list, tuple)):        # polyEvaluate/caller may hand back [N]; want a scalar int
@@ -60,7 +60,7 @@ def pin_border(cloth:str, mesh:str, axis:int=1, side:str="max", tolerance:float=
     """Pin the extreme row of vertices along a world axis (e.g. the top edge of a curtain).
 
     Args:
-        cloth:     (str):   - the lCloth shape.
+        cloth:     (str):   - the loomCloth shape.
         mesh:      (str):   - the simulated mesh.
         axis:      (int):   - 0=X, 1=Y, 2=Z.
         side:      (str):   - "max" or "min" end of that axis.
@@ -74,19 +74,19 @@ def pin_border(cloth:str, mesh:str, axis:int=1, side:str="max", tolerance:float=
 
 
 def paint(cloth:str, param:str="pinWeights"):
-    """Open the Maya paint tool on one of an lCloth's per-vertex maps (one-click paint flow).
+    """Open the Maya paint tool on one of a loomCloth's per-vertex maps (one-click paint flow).
 
     Ensures the map array exists at the mesh's vertex count, registers it paintable, then activates the
     Artisan attribute paint context targeting it.
 
     Args:
-        cloth: (str): - the lCloth shape (transform or shape).
+        cloth: (str): - the loomCloth shape (transform or shape).
         param: (str): - the map to paint: pinWeights, massMap, stretchStiffnessMap, bendStiffnessMap,
                         compressionStiffnessMap, thicknessMap, goalStrengthMap or reducerMap.
     """
     shape = util.cloth_shape(cloth)
     if param not in PAINTABLE:
-        log.error("'%s' is not a paintable lCloth map (%s)." % (param, ", ".join(PAINTABLE)))
+        log.error("'%s' is not a paintable loomCloth map (%s)." % (param, ", ".join(PAINTABLE)))
         return
     _register_paintable()
     n = util.vert_count(shape)
@@ -102,16 +102,16 @@ def paint(cloth:str, param:str="pinWeights"):
         if not cmds.artAttrCtx(ctx, exists=True):
             cmds.artAttrCtx(ctx)
         cmds.setToolTo(ctx)
-        cmds.artAttrCtx(ctx, edit=True, attrSelected="lCloth.%s.%s" % (shape, param))
+        cmds.artAttrCtx(ctx, edit=True, attrSelected="loomCloth.%s.%s" % (shape, param))
     except Exception as error:
         log.warning("could not open the paint tool for %s.%s (%s)." % (shape, param, error))
 
 
 def set_map(cloth:str, param:str, values:list):
-    """Set an lCloth per-vertex map directly from a list of floats (0..1).
+    """Set a loomCloth per-vertex map directly from a list of floats (0..1).
 
     Args:
-        cloth:  (str):  - the lCloth shape (transform or shape).
+        cloth:  (str):  - the loomCloth shape (transform or shape).
         param:  (str):  - the map attribute (see paint()).
         values: (list): - one value per vertex.
     """

@@ -3,6 +3,15 @@
 CLAUDE.md
 *.jsonl
 
+# Plugins ignores
+plugins/*
+!plugins/2022
+!plugins/2023
+!plugins/2024
+!plugins/2025
+!plugins/2026
+!plugins/2027
+
 # Python ignores
 __pycache__/
 *.py[cod]

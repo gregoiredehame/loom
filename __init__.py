@@ -8,7 +8,7 @@ Module: __init__
 Execute: import loom
 
 Loom : an in-house Maya cloth / soft-body toolset (an XPBD solver). This is the
-Python API. The nodes (loom solver, lCloth, lCollider) currently ship inside the kata plug-in (kata.mll);
+Python API. The nodes (loom solver, loomCloth, loomCollider) currently ship inside the kata plug-in (kata.mll);
 loom.load() loads it. A standalone loom.mll is a later extraction (the C++ lives in kata/plugins for now).
 
     import loom
@@ -23,21 +23,29 @@ loom.load() loads it. A standalone loom.mll is a later extraction (the C++ lives
 from __future__ import annotations
 from __future__ import absolute_import
 
-__versiontuple__ = (0, 0, 1)
+__versiontuple__ = (0, 1, 0)
 __version__ = ".".join(str(x) for x in __versiontuple__)
 
 __author__ = "Gregoire Dehame"
 
 import os
+import sys
 import logging
 log = logging.getLogger("loom")          # base logger; all loom.* module loggers propagate here
 log.setLevel(logging.INFO)
 
+# the folder on disk is "loom_dynamics" (the git-submodule path), but the package is meant to be used as
+# "loom" : alias this module so `import loom` and `from loom import ...` resolve to this exact package. The
+# sub-modules already do `from . import ...`, so relative imports keep working; only the top-level name
+# gets the short alias. Registering it on the package itself means the alias exists however loom is first
+# imported (via kata boot, or a direct `from kata.ui import loom_dynamics`).
+sys.modules.setdefault("loom", sys.modules[__name__])
+
 __loom__ = os.path.dirname(os.path.abspath(__file__))
 
-# the Maya plug-in that registers the loom / lCloth / lCollider nodes. For now this is the kata plug-in
-# (the C++ lives in kata/plugins); a standalone "loom" plug-in is a later extraction. loom.load() tries
-# the loom plug-in first, then falls back to kata, so the API keeps working through the migration.
+# the standalone Maya plug-in that registers the loom / loomCloth / loomCollider nodes (loom.mll, built
+# per Maya version into loom_dynamics/plugins/<version>/). load() tries "loom" first, then falls back to
+# "kata" only for legacy scenes whose nodes were authored while loom still shipped inside kata.mll.
 PLUGIN = "loom"
 PLUGIN_FALLBACK = "kata"
 
@@ -66,4 +74,4 @@ def reload_api():
     from . import util, solver, cloth, collider, weights, material, display, cache
     for module in (util, solver, cloth, collider, weights, material, display, cache):
         importlib.reload(module)
-    importlib.reload(__import__("loom"))
+    importlib.reload(importlib.import_module(__name__))

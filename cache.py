@@ -28,13 +28,13 @@ def preflight(cloth:str) -> list:
     ordered correctly.
 
     Args:
-        cloth: (str): - the lCloth shape (transform or shape) or the simulated mesh.
+        cloth: (str): - the loomCloth shape (transform or shape) or the simulated mesh.
 
     Returns:
         list: the issues found (strings), empty when the garment is clean.
     """
     shape = cloth
-    if cmds.nodeType(shape) == "lCloth":
+    if cmds.nodeType(shape) == "loomCloth":
         src = cmds.listConnections(shape + ".inMesh", source=True, destination=False) or []
         mesh = src[0] if src else None
     else:
@@ -54,7 +54,7 @@ def preflight(cloth:str) -> list:
                 issues.append("mostly-ngon or heavily triangulated mesh (quads recommended)")
         except Exception:
             pass
-    if cmds.nodeType(shape) == "lCloth":
+    if cmds.nodeType(shape) == "loomCloth":
         if util.has_attr(shape, "dynamicFriction") and cmds.getAttr(shape + ".dynamicFriction") > cmds.getAttr(shape + ".staticFriction"):
             issues.append("dynamicFriction > staticFriction (dynamic should be <= static)")
         if util.has_attr(shape, "skinDrag") and cmds.getAttr(shape + ".skinDrag") > cmds.getAttr(shape + ".airDrag"):

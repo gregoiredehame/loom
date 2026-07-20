@@ -1,28 +1,35 @@
-# loom — in-house Maya cloth API
+# loom : in-house Maya cloth API
 
-XPBD cloth / soft-body toolset for Maya. This folder is the **Python API**. The nodes
-(`loom` solver, `lCloth`, `lCollider`) currently ship inside the **kata** plug-in (`kata.mll`); a
-standalone `loom.mll` is a later extraction. `loom.load()` loads whichever is available.
+XPBD cloth and soft-body toolset for Maya. This folder holds both the **Python API** and the standalone
+**`loom.mll`** plug-in that registers the nodes (`loom` solver, `loomCloth`, `loomCollider`). `loom.load()`
+puts the per-version plug-in folder on the plug-in path and loads it, so the API is self-contained.
 
 ## Install
 
-`C:\Users\USER\Documents\maya\scripts` is already on Maya's Python path (that is where kata lives), so
-`import loom` works out of the box. For the styled Attribute Editor templates, put `loom/scripts` on the
-MEL path — add to your `userSetup.py` (or `userSetup.mel`):
+`loom` lives inside kata at `kata/ui/loom_dynamics`, so it comes along with kata. From Maya:
 
 ```python
-# userSetup.py
+from kata.ui import loom_dynamics as loom
+loom.load()   # loads loom.mll for the running Maya version
+```
+
+kata already calls this on boot (`main.run(plugins=True)`), so the nodes are ready as soon as Maya starts.
+
+For the styled Attribute Editor templates, put `loom_dynamics/scripts` on the MEL path. Add to your
+`userSetup.py`:
+
+```python
 import os, maya.mel as mel
-loom_scripts = os.path.expanduser("~/Documents/maya/scripts/loom/scripts")
+loom_scripts = os.path.expanduser("~/Documents/maya/scripts/kata/ui/loom_dynamics/scripts")
 mel.eval('putenv "MAYA_SCRIPT_PATH" (`getenv "MAYA_SCRIPT_PATH"` + ";%s")' % loom_scripts.replace("\\", "/"))
 ```
 
-or simply copy the three `AE*Template.mel` files into a folder already on `MAYA_SCRIPT_PATH`.
+or copy the three `AE*Template.mel` files into a folder already on `MAYA_SCRIPT_PATH`.
 
 ## Quick start
 
 ```python
-import loom
+from kata.ui import loom_dynamics as loom
 
 # a body collider from a joint chain, fitted to the body mesh, drawn in the viewport
 body = loom.build_collider(spine_joints, mesh="body_geo")
@@ -36,7 +43,7 @@ loom.pin_border(shirt, "shirt_geo", axis=1, side="max")
 loom.apply_preset(shirt, "cotton")
 loom.paint(shirt, "pinWeights")            # opens the Maya paint tool on the pin map
 
-# physics draw + play
+# physics draw and play
 loom.display(shirt, mode="soft primitives")
 loom.reset()
 ```
@@ -45,24 +52,29 @@ loom.reset()
 
 | module | what it holds |
 |--------|---------------|
-| `loom.solver`   | `get_solver`, `reset`, `partial_reset`, `world` (gravity/wind/substeps…) |
-| `loom.cloth`    | `setup`, `setup_after_skin`, `setup_wrapped`, `remove_cloth`, the `MATERIAL` wiring |
-| `loom.collider` | `build_collider`, `build_sphere_collider`, `build_mesh_collider`, `attach`, `detach`, `add_*`, `auto_capsules` |
-| `loom.weights`  | `pin`, `pin_border`, `paint`, `set_map`, `PAINTABLE` |
-| `loom.material` | `apply_preset`, `save_material`, `load_material`, `presets` |
-| `loom.display`  | `display` (physics draw modes) |
-| `loom.cache`    | `bake` (Alembic), `preflight` (geometry checklist) |
-| `loom.util`     | `load` (plug-in), `shape`, `next_name`, `vert_count`, … |
+| `solver`   | `get_solver`, `reset`, `partial_reset`, `world` (gravity/wind/substeps…) |
+| `cloth`    | `setup`, `setup_after_skin`, `setup_wrapped`, `remove_cloth`, the `MATERIAL` wiring |
+| `collider` | `build_collider`, `build_sphere_collider`, `build_mesh_collider`, `attach`, `detach`, `add_*`, `auto_capsules` |
+| `weights`  | `pin`, `pin_border`, `paint`, `set_map`, `PAINTABLE` |
+| `material` | `apply_preset`, `save_material`, `load_material`, `presets` |
+| `display`  | `display` (physics draw modes) |
+| `cache`    | `bake` (Alembic), `preflight` (geometry checklist) |
+| `util`     | `load` (plug-in), `shape`, `next_name`, `vert_count`, … |
 
 ## Physics draw modes
 
-- **lCloth** `display(mode=...)` : `None` / `Surface` (faces) / `Mesh` (wire) / `Soft Primitives`
-  (particles + constraint links) / `Paint Map` (per-vertex weight colours).
-- **lCollider** : `None` / `Surface` (capsules + spheres) / `Mesh` (the collider geometry).
+- **loomCloth** `display(mode=...)` : `None` / `Surface` (faces) / `Mesh` (wire) / `Soft Primitives`
+  (particles plus constraint links) / `Paint Map` (per-vertex weight colours).
+- **loomCollider** : `None` / `Surface` (capsules plus spheres) / `Mesh` (the collider geometry).
+
+## Build
+
+The C++ is a standalone plug-in built per Maya version into `plugins/<version>/loom.mll`. Open
+`plugins/loom.sln` in Visual Studio (batch-build the `release|x64` configs), or run
+`scripts/build_all.bat 2026 loom` from the repo root.
 
 ## Status
 
-- Python API : complete, `import loom` works.
-- Nodes : provided by `kata.mll` for now (the C++ lives in `kata/plugins`). Standalone `loom.mll` is a
-  planned extraction (see `kata/plugins/LOOM_V2_PLAN.md`).
+- Python API : complete.
+- Nodes : provided by the standalone `loom.mll` (own VS solution in `plugins/`).
 - Smoke test : `kata/rig/loom_test.py` (10/10). A loom-native test suite is a follow-up.

@@ -8,9 +8,9 @@ Module: collider
 Execute: from loom import collider
 
 Colliders: primitive (sphere / capsule) and mesh collision geometry for the loom solver. Author the
-body's collision once as a drawn lCollider node (it draws itself and its radii in the viewport), then
+body's collision once as a drawn loomCollider node (it draws itself and its radii in the viewport), then
 attach() it to the solver so every garment collides. add_* write straight onto the solver (no drawn
-node); build_* create a reusable, drawn lCollider.
+node); build_* create a reusable, drawn loomCollider.
 """
 
 import logging
@@ -25,7 +25,7 @@ from .solver import get_solver
 def add_sphere(solver:str, driver:str, radius:float) -> int:
     """Attach a sphere collider to the solver, driven by a transform's world matrix.
 
-    A collider straight on the solver (no drawn lCollider). See build_collider() + attach() for the
+    A collider straight on the solver (no drawn loomCollider). See build_collider() + attach() for the
     reusable, drawn path.
 
     Args:
@@ -45,7 +45,7 @@ def add_sphere(solver:str, driver:str, radius:float) -> int:
 def add_capsule(solver:str, driver_a:str, driver_b:str, radius_a:float, radius_b:float=None) -> int:
     """Attach a capsule collider to the solver, between two transforms (e.g. an arm or leg segment).
 
-    A collider straight on the solver (no drawn lCollider). See build_collider() + attach() for the
+    A collider straight on the solver (no drawn loomCollider). See build_collider() + attach() for the
     reusable, drawn path.
 
     Args:
@@ -124,7 +124,7 @@ def _fit_radii(mesh:str, joints:list, percentile:float=0.9, scale:float=1.0) -> 
 def auto_capsules(solver:str, collider_mesh:str, joints:list, percentile:float=0.9, scale:float=1.0) -> list:
     """Fit a capsule collider to each bone by measuring the body mesh, straight onto the solver.
 
-    See build_collider() for the same fit as a separate, reusable, drawn lCollider node.
+    See build_collider() for the same fit as a separate, reusable, drawn loomCollider node.
 
     Args:
         solver:        (str):   - the loom solver.
@@ -146,10 +146,10 @@ def auto_capsules(solver:str, collider_mesh:str, joints:list, percentile:float=0
 
 def build_collider(joints:list, mesh:str=None, radius:float=1.0, percentile:float=0.9,
                    scale:float=1.0, name:str=None) -> str:
-    """Create a separate, drawn lCollider node: capsules along the joints, shared across cloths.
+    """Create a separate, drawn loomCollider node: capsules along the joints, shared across cloths.
 
     Author the body's collision once here - it draws itself in the viewport (see the capsules and
-    their radii) - then attach() it to any number of lCloth nodes. This is how nRigid / a physics
+    their radii) - then attach() it to any number of loomCloth nodes. This is how nRigid / a physics
     asset works: one collider object, many cloths.
 
     Args:
@@ -161,12 +161,12 @@ def build_collider(joints:list, mesh:str=None, radius:float=1.0, percentile:floa
         name:       (str):   - node name.
 
     Returns:
-        str: the lCollider transform node.
+        str: the loomCollider transform node.
     """
     util.load()
-    # a clean transform + shape, so the outliner shows "lCollider1" (not an auto "transform1")
-    xform = cmds.createNode("transform", name=name or util.next_name("lCollider"))
-    shape = cmds.createNode("lCollider", name=xform + "Shape", parent=xform)
+    # a clean transform + shape, so the outliner shows "loomCollider1" (not an auto "transform1")
+    xform = cmds.createNode("transform", name=name or util.next_name("loomCollider"))
+    shape = cmds.createNode("loomCollider", name=xform + "Shape", parent=xform)
     radii = _fit_radii(mesh, joints, percentile, scale) if mesh is not None else [radius] * (len(joints) - 1)
     for k in range(len(joints) - 1):
         cmds.connectAttr(joints[k]     + ".worldMatrix[0]", "%s.capsule[%d].capMatrixA" % (shape, k), force=True)
@@ -178,7 +178,7 @@ def build_collider(joints:list, mesh:str=None, radius:float=1.0, percentile:floa
 
 
 def build_sphere_collider(driver:str, radius:float, solver:str=None, name:str=None) -> str:
-    """Create a drawn lCollider with a single sphere (driven by `driver`) and attach it to the solver.
+    """Create a drawn loomCollider with a single sphere (driven by `driver`) and attach it to the solver.
 
     The node is VISIBLE in the viewport (it draws the sphere at its radius) and selectable - unlike
     add_sphere(), which writes the sphere straight onto the solver with no node to see.
@@ -190,11 +190,11 @@ def build_sphere_collider(driver:str, radius:float, solver:str=None, name:str=No
         name:   (str):   - node name.
 
     Returns:
-        str: the lCollider transform.
+        str: the loomCollider transform.
     """
     util.load()
-    xform = cmds.createNode("transform", name=name or util.next_name("lCollider"))
-    shape = cmds.createNode("lCollider", name=xform + "Shape", parent=xform)
+    xform = cmds.createNode("transform", name=name or util.next_name("loomCollider"))
+    shape = cmds.createNode("loomCollider", name=xform + "Shape", parent=xform)
     cmds.connectAttr(driver + ".worldMatrix[0]", shape + ".sphere[0].sphMatrix", force=True)
     cmds.setAttr(shape + ".sphere[0].sphRadius", radius)
     attach(shape, solver or get_solver())
@@ -202,7 +202,7 @@ def build_sphere_collider(driver:str, radius:float, solver:str=None, name:str=No
 
 
 def build_mesh_collider(mesh:str, name:str=None) -> str:
-    """Create a drawn lCollider that shows a body mesh as the collider geometry (nRigid look).
+    """Create a drawn loomCollider that shows a body mesh as the collider geometry (nRigid look).
 
     Mesh collision IS now supported (v2): enable the collider's meshCollide attribute and attach() the
     node, and the solver's mesh-collision path takes the collider mesh into account. The node also draws
@@ -214,24 +214,24 @@ def build_mesh_collider(mesh:str, name:str=None) -> str:
         name: (str): - node name.
 
     Returns:
-        str: the lCollider transform.
+        str: the loomCollider transform.
     """
     util.load()
-    xform = cmds.createNode("transform", name=name or util.next_name("lCollider"))
-    shape = cmds.createNode("lCollider", name=xform + "Shape", parent=xform)
+    xform = cmds.createNode("transform", name=name or util.next_name("loomCollider"))
+    shape = cmds.createNode("loomCollider", name=xform + "Shape", parent=xform)
     cmds.connectAttr(util.shape(mesh) + ".worldMesh[0]", shape + ".inMesh", force=True)
     return xform
 
 
 def attach(collider_node:str, solver:str=None):
-    """Feed an lCollider's primitives into the loom solver, so every garment on that solver collides.
+    """Feed a loomCollider's primitives into the loom solver, so every garment on that solver collides.
 
-    Matrices come from the collider's own drivers (the joints), radii live-linked from the lCollider -
+    Matrices come from the collider's own drivers (the joints), radii live-linked from the loomCollider -
     tweak a radius on the collider and the solver follows. When meshCollide is on, the collider mesh and
     its scalar attributes are wired into the solver's mesh-collision path too.
 
     Args:
-        collider_node: (str): - the lCollider node (transform or shape).
+        collider_node: (str): - the loomCollider node (transform or shape).
         solver:        (str): - the loom solver (None = the shared one).
     """
     collider_node = util.collider_shape(collider_node)
@@ -278,7 +278,7 @@ def detach(collider_node:str, solver:str=None):
     source connection), leaving other colliders on the solver untouched.
 
     Args:
-        collider_node: (str): - the lCollider node (transform or shape).
+        collider_node: (str): - the loomCollider node (transform or shape).
         solver:        (str): - the loom solver (None = the shared one).
     """
     collider_node = util.collider_shape(collider_node)
