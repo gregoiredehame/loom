@@ -3,7 +3,7 @@ LOOM. (c)
 
 Author: Gregoire Dehame
 Created: Jul 20, 2026
-Modified: Jul 20, 2026
+Modified: Sep 29, 2026
 Module: __init__
 Execute: import loom
 
@@ -23,7 +23,7 @@ loom.load() loads it. A standalone loom.mll is a later extraction (the C++ lives
 from __future__ import annotations
 from __future__ import absolute_import
 
-__versiontuple__ = (0, 1, 0)
+__versiontuple__ = (0, 1, 1)
 __version__ = ".".join(str(x) for x in __versiontuple__)
 
 __author__ = "Gregoire Dehame"

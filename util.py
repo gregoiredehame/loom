@@ -78,19 +78,18 @@ def load():
         pass
 
     try:
+        # - a plug-in only counts when it really registered the loom node: loadPlugin raises nothing when
+        #   initializePlugin fails (a node type id taken by another plug-in, say), and kata no longer holds loom
         for name in (PLUGIN, PLUGIN_FALLBACK):
             try:
-                if cmds.pluginInfo(name, query=True, loaded=True):
+                if not cmds.pluginInfo(name, query=True, loaded=True):
+                    cmds.loadPlugin(name, quiet=True)
+                if "loom" in (cmds.pluginInfo(name, query=True, dependNode=True) or []):
                     return name
             except Exception:
-                pass
-            try:
-                cmds.loadPlugin(name, quiet=True)
-                return name
-            except Exception:
                 continue
-        log.error("could not load the loom plug-in ('%s', fallback '%s'). Build loom.mll into %s."
-                  % (PLUGIN, PLUGIN_FALLBACK, plugin_dir))
+        log.error("could not load the loom plug-in ('%s', fallback '%s'): either loom.mll is not built into %s, or "
+                  "its nodes could not register (see the error above)." % (PLUGIN, PLUGIN_FALLBACK, plugin_dir))
         return None
     finally:
         # restore the user's original "ask when new plug-in detected" preference
